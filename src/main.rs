@@ -16,8 +16,9 @@ fn prompt(text: &str) -> String{
 }
 
 fn main() {
-    let ip = prompt("what IP are you trying to connect to?");
     let listener = TcpListener::bind("0.0.0.0:7878").unwrap();
+    let ip = prompt("what IP are you trying to connect to?");
+    println!("trying to connect to: {}", ip);
     match TcpStream::connect(format!("{}:7878", ip)){ 
         Ok(stream) => {
             println!("success");
