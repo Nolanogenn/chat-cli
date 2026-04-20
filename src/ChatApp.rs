@@ -23,7 +23,6 @@ pub struct App {
     input_mode: InputMode,
     list_state: ListState,
     items: Vec<String>,
-    listener: TcpListener,
     rx: mpsc::Receiver<Event>,
     tx: mpsc::Sender<Event>
 }
@@ -40,7 +39,6 @@ impl App {
     pub fn new(
         list_state: ListState,
         items: Vec<String>,
-        listener: TcpListener,
         rx: mpsc::Receiver<Event>,
         tx: mpsc::Sender<Event>
         ) -> Self {
@@ -53,7 +51,6 @@ impl App {
             character_index: 0,
             list_state: list_state,
             items: items,
-            listener: listener,
             rx: rx,
             tx: tx
         }
@@ -151,12 +148,12 @@ impl App {
         let tx_to_connection_events = self.tx.clone();
         thread::spawn(move || {
             match TcpStream::connect_timeout(
-                &addr, Duration::from_secs(10)
+                &addr, Duration::from_secs(5)
                 ){
                 Ok(stream) => {
                     tx_to_connection_events.send(
                         Event::ConnectionOk(
-                            addr, stream)).unwrap();
+                            addr, & stream)).unwrap();
                 }
                 Err(_) => {
                     tx_to_connection_events.send(
@@ -166,8 +163,14 @@ impl App {
             }
         });
     }
-    fn handle_connection_ok(&mut self) -> io::Result<()>{
+    fn handle_connection_ok(&mut self, stream: & TcpStream) -> io::Result<()>{
         self.input_mode = InputMode::WaitingForResponse;
+        stream.write("::TRYCONN::")?;
+        Ok(())
+    }
+    fn handle_connection_ko(&mut self) -> io::Result<()>{
+        self.msg = "Impossibile stabilire una connessione".to_string();
+        self.input_mode = InputMode::Error;
         Ok(())
     }
     pub fn run(
@@ -178,8 +181,8 @@ impl App {
             terminal.draw(|frame| self.render(frame))?;
             match self.rx.recv().unwrap(){
                     Event::Input(key_event) => self.handle_key_event(key_event)?,
-                    Event::ConnectionOk(addr, stream) => self.handle_connection_ok()?,
-                    Event::ConnectionKo(addr) => todo!(),
+                    Event::ConnectionOk(addr, stream) => self.handle_connection_ok(& stream)?,
+                    Event::ConnectionKo(addr) => self.handle_connection_ko()?,
                     _ => todo!()
                 }
         }
