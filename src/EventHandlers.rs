@@ -1,13 +1,14 @@
 use crossterm::event::{KeyEvent};
 use std::{
     sync::mpsc,
-    net::TcpStream
+    net::TcpStream,
+    net::SocketAddr
 };
 
 pub enum Event{
     Input(KeyEvent),
-    ConnectionOk(String,TcpStream),
-    ConnectionKo(String),
+    ConnectionOk(SocketAddr,TcpStream),
+    ConnectionKo(SocketAddr),
 }
 
 pub fn handle_input_events(tx: mpsc::Sender<Event>){

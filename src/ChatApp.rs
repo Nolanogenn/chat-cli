@@ -9,6 +9,8 @@ use std::{
     io,
     sync::mpsc,
     thread,
+    time::Duration,
+    net::SocketAddr
 };
 use crate::EventHandlers::*;
 
@@ -31,6 +33,7 @@ enum InputMode {
     List,
     Connecting,
     Waiting,
+    WaitingForResponse
 }
 
 impl App {
@@ -95,6 +98,12 @@ impl App {
     }
     fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) -> io::Result<()> {
         match self.input_mode {
+            InputMode::WaitingForResponse => match key_event.code {
+                KeyCode::Esc => {
+                    self.input_mode = InputMode::Connecting
+                },
+                _ => {}
+            }
             InputMode::Error => match key_event.code{
                 KeyCode::Esc => {
                     self.input_mode = InputMode::Connecting
@@ -118,23 +127,12 @@ impl App {
                     KeyCode::Esc => { self.input_mode = InputMode::List},
                     KeyCode::Enter => {
                         self.input_mode = InputMode::Waiting;
-                        let addr = format!("{}:7878", self.input);
+                        let addr_str = format!("{}:7878", self.input);
+                        let addr: SocketAddr = addr_str
+                            .parse()
+                            .expect("unable to pase");
                         self.try_connection(addr);
-                        loop {
-                            match self.rx.recv() {
-                                Ok(Event::ConnectionOk(addr, stream)) => {
-                                    todo!()
-                                }
-                                Ok(Event::ConnectionKo(addr)) => {
-                                    todo!()
-                                }
-                                Err(_) => {
-                                    todo!()
-                                }
-                                _ => {}
-                            }
-                        }
-                    },
+                        },
                     KeyCode::Char(to_insert) => self.enter_char(to_insert),
                     KeyCode::Backspace => self.delete_char(),
                     _ => {}
@@ -149,10 +147,12 @@ impl App {
         }
         Ok(())
     }
-    fn try_connection(& self, addr: String){
+    fn try_connection(& self, addr: SocketAddr){
         let tx_to_connection_events = self.tx.clone();
         thread::spawn(move || {
-            match TcpStream::connect(&addr){
+            match TcpStream::connect_timeout(
+                &addr, Duration::from_secs(10)
+                ){
                 Ok(stream) => {
                     tx_to_connection_events.send(
                         Event::ConnectionOk(
@@ -166,6 +166,10 @@ impl App {
             }
         });
     }
+    fn handle_connection_ok(&mut self) -> io::Result<()>{
+        self.input_mode = InputMode::WaitingForResponse;
+        Ok(())
+    }
     pub fn run(
         &mut self,
         terminal: &mut DefaultTerminal,
@@ -174,6 +178,8 @@ impl App {
             terminal.draw(|frame| self.render(frame))?;
             match self.rx.recv().unwrap(){
                     Event::Input(key_event) => self.handle_key_event(key_event)?,
+                    Event::ConnectionOk(addr, stream) => self.handle_connection_ok()?,
+                    Event::ConnectionKo(addr) => todo!(),
                     _ => todo!()
                 }
         }
@@ -188,6 +194,10 @@ impl App {
         let [_top,first,_second] = frame.area().layout(&layout);
         let [help_area, input_area, messages_area] = frame.area().layout(&layout);
         let (msg, style) = match self.input_mode {
+            InputMode::WaitingForResponse => (
+                vec!["Connessione stabilita. In attesa di una risposta...".bold()],
+                Style::default()
+                ),
             InputMode::List => (
                 vec!["Possible options".bold()],
                 Style::default()
@@ -222,8 +232,8 @@ impl App {
                     .block(Block::bordered().title("ERROR"));
                 frame.render_widget(error_message, messages_area)
             },
-            InputMode::Waiting => {
-            }
+            InputMode::Waiting => {},
+            InputMode::WaitingForResponse => {}
         }
     }
     
