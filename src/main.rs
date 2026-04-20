@@ -1,3 +1,4 @@
+use std::net::TcpListener;
 use ratatui::widgets::{ListState};
 use std::{
     io,
@@ -17,9 +18,16 @@ fn main() -> io::Result<()> {
     });
     let list_state = ListState::default().with_selected(Some(0));
     let mut items: Vec<String> = Vec::with_capacity(99);
+    let listener = TcpListener::bind("0.0.0.0:7878").unwrap();
     items.push("new connection".to_string());
-    let mut app = ChatApp::App::new(list_state,items);
-    let app_result = app.run(&mut terminal, event_rx);
+    let mut app = ChatApp::App::new(
+        list_state,
+        items,
+        listener,
+        event_rx,
+        event_tx
+        );
+    let app_result = app.run(&mut terminal);
     ratatui::restore();
     app_result
 }
