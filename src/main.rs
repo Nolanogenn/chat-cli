@@ -18,10 +18,9 @@ fn main() -> io::Result<()> {
     });
     let list_state = ListState::default().with_selected(Some(0));
     let mut items: Vec<String> = Vec::with_capacity(99);
-    let listener = TcpListener::bind("0.0.0.0:7878").unwrap();
     let tx_to_listener_events = event_tx.clone();
     thread::spawn(move || {
-        EventHandlers::handle_listener_events(&listener, tx_to_listener_events);
+        EventHandlers::handle_listener_events(tx_to_listener_events);
     });
     items.push("new connection".to_string());
     let mut app = ChatApp::App::new(

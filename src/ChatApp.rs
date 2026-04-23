@@ -14,7 +14,7 @@ use std::{
 };
 use crate::EventHandlers::*;
 
-pub struct App {
+pub struct App<'a> {
     exit: bool,
     msg: String,
     input: String,
@@ -23,8 +23,8 @@ pub struct App {
     input_mode: InputMode,
     list_state: ListState,
     items: Vec<String>,
-    rx: mpsc::Receiver<Event>,
-    tx: mpsc::Sender<Event>
+    rx: mpsc::Receiver<Event<'a>>,
+    tx: mpsc::Sender<Event<'a>>
 }
 
 enum InputMode {
@@ -35,7 +35,7 @@ enum InputMode {
     WaitingForResponse
 }
 
-impl App {
+impl App<'_> {
     pub fn new(
         list_state: ListState,
         items: Vec<String>,
@@ -165,7 +165,7 @@ impl App {
     }
     fn handle_connection_ok(&mut self, stream: & TcpStream) -> io::Result<()>{
         self.input_mode = InputMode::WaitingForResponse;
-        stream.write("::TRYCONN::")?;
+        stream.write("::<TRYCONN>::")?;
         Ok(())
     }
     fn handle_connection_ko(&mut self) -> io::Result<()>{
