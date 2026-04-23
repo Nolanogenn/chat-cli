@@ -1,15 +1,15 @@
 use crossterm::event::{KeyEvent};
-use std::{io::BufReader, prelude::*};
 use std::{
     sync::mpsc,
     net::TcpStream,
     net::TcpListener,
     net::SocketAddr,
+    io::{BufReader, prelude::*}
 };
 
-pub enum Event<'a>{
+pub enum Event{
     Input(KeyEvent),
-    ConnectionOk(SocketAddr,&'a TcpStream),
+    ConnectionOk(SocketAddr,TcpStream),
     ConnectionKo(SocketAddr),
     TcpMessageIn(String),
     Error(String)
@@ -21,10 +21,10 @@ pub fn handle_listener_events(tx:mpsc::Sender<Event>){
         let stream = stream.unwrap();
         let buf_reader = BufReader::new(&stream);
         for line in buf_reader.lines(){
-            match line {
+            match line{
                 Ok(msg) => tx.send(Event::TcpMessageIn(msg)),
                 Err(e) => tx.send(Event::Error(format!("{}", e)))
-            }
+            };
         };
     };
 }

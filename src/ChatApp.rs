@@ -14,7 +14,7 @@ use std::{
 };
 use crate::EventHandlers::*;
 
-pub struct App<'a> {
+pub struct App{
     exit: bool,
     msg: String,
     input: String,
@@ -23,8 +23,9 @@ pub struct App<'a> {
     input_mode: InputMode,
     list_state: ListState,
     items: Vec<String>,
-    rx: mpsc::Receiver<Event<'a>>,
-    tx: mpsc::Sender<Event<'a>>
+    stream: Option<TcpStream>,
+    rx: mpsc::Receiver<Event>,
+    tx: mpsc::Sender<Event>
 }
 
 enum InputMode {
@@ -35,7 +36,7 @@ enum InputMode {
     WaitingForResponse
 }
 
-impl App<'_> {
+impl App {
     pub fn new(
         list_state: ListState,
         items: Vec<String>,
@@ -51,6 +52,7 @@ impl App<'_> {
             character_index: 0,
             list_state: list_state,
             items: items,
+            stream: None,
             rx: rx,
             tx: tx
         }
@@ -153,7 +155,7 @@ impl App<'_> {
                 Ok(stream) => {
                     tx_to_connection_events.send(
                         Event::ConnectionOk(
-                            addr, & stream)).unwrap();
+                            addr, stream)).unwrap();
                 }
                 Err(_) => {
                     tx_to_connection_events.send(
@@ -163,9 +165,10 @@ impl App<'_> {
             }
         });
     }
-    fn handle_connection_ok(&mut self, stream: & TcpStream) -> io::Result<()>{
+    fn handle_connection_ok(&mut self, stream: TcpStream) -> io::Result<()>{
         self.input_mode = InputMode::WaitingForResponse;
-        stream.write("::<TRYCONN>::")?;
+        self.stream = Some(stream);
+        //stream.write("::<TRYCONN>::")?;
         Ok(())
     }
     fn handle_connection_ko(&mut self) -> io::Result<()>{
@@ -181,7 +184,7 @@ impl App<'_> {
             terminal.draw(|frame| self.render(frame))?;
             match self.rx.recv().unwrap(){
                     Event::Input(key_event) => self.handle_key_event(key_event)?,
-                    Event::ConnectionOk(addr, stream) => self.handle_connection_ok(& stream)?,
+                    Event::ConnectionOk(addr, stream) => self.handle_connection_ok(stream)?,
                     Event::ConnectionKo(addr) => self.handle_connection_ko()?,
                     _ => todo!()
                 }
