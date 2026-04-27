@@ -19,6 +19,7 @@ use crate::StreamHandler::*;
 pub struct App{
     exit: bool,
     msg: String,
+    messages: Vec<String>,
     input: String,
     connected: bool,
     character_index: usize,
@@ -36,6 +37,7 @@ enum InputMode {
     Error,
     List,
     Connecting,
+    Connected,
     Waiting,
     WaitingForResponse
 }
@@ -62,7 +64,8 @@ impl App {
             tx: tx,
             client: Client::new(client_tx),
             username: username,
-            local_addr: None
+            local_addr: None,
+            messages: Vec::new(),
         }
     }
     fn move_cursor_left(&mut self) {
@@ -105,6 +108,15 @@ impl App {
     }
     fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) -> io::Result<()> {
         match self.input_mode {
+            InputMode::Connected => match key_event.code {
+                KeyCode::Esc => { self.input_mode = InputMode::List },
+                KeyCode::Char(to_insert) => self.enter_char(to_insert),
+                KeyCode::Backspace => self.delete_char(),
+                KeyCode::Left => self.move_cursor_left(),
+                KeyCode::Right => self.move_cursor_right(),
+                KeyCode::Enter => self.write_msg("MSG".to_string(), self.input.clone()),
+                _ => {}
+            }
             InputMode::WaitingForResponse => match key_event.code {
                 KeyCode::Esc => {
                     self.write_msg(
@@ -171,6 +183,7 @@ impl App {
             addr.parse().expect(
                 &format!("unable to parse: {}", addr)
                 ));
+        self.input_mode = InputMode::Connected;
     }
     fn try_connection(& mut self, addr: SocketAddr){
         self.client.connect_to(addr);
@@ -202,7 +215,7 @@ impl App {
             match command {
                 "TRYCONN" =>{
                     match self.input_mode{
-                        InputMode::WaitingForResponse => todo!(),
+                        InputMode::WaitingForResponse => self.input_mode = InputMode::Connected,
                         _ => {self.items.push(
                             format!(
                                 "{} {}",
@@ -244,6 +257,10 @@ impl App {
         let [_top,first,_second] = frame.area().layout(&layout);
         let [help_area, input_area, messages_area] = frame.area().layout(&layout);
         let (msg, style) = match self.input_mode {
+            InputMode::Connected => (
+                vec!["chat".bold()],
+                Style::default(),
+                ),
             InputMode::WaitingForResponse => (
                 vec!["Connessione stabilita. In attesa di una risposta...".bold()],
                 Style::default()
@@ -269,6 +286,12 @@ impl App {
         let help_message = Paragraph::new(text);
         frame.render_widget(help_message, help_area);
         match self.input_mode {
+            InputMode::Connected => {
+                let input = Paragraph::new(self.input.as_str())
+                    .style(Style::default())
+                    .block(Block::bordered().title("Input"));
+                frame.render_widget(input, input_area);
+            }
             InputMode::List => self.render_list(frame, first),
             InputMode::Connecting => {
                 let input = Paragraph::new(self.input.as_str())
