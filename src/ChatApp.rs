@@ -138,8 +138,12 @@ impl App {
                 KeyCode::Esc => { self.exit = true; },
                 KeyCode::Enter => {
                     match self.list_state.selected() {
-                        Some(0) => { self.input_mode = InputMode::Connecting},
-                        Some(n) => { self.accept_conn(n) },
+                        Some(0) => {
+                            self.input_mode = InputMode::Connecting
+                        },
+                        Some(n) => {
+                            self.accept_conn(n)
+                        },
                         _ => {}
                     }
                 }
@@ -184,7 +188,7 @@ impl App {
     fn accept_conn(& mut self, n: usize){
         let user: Vec<&str> = self.items.get(n).unwrap().split(' ').collect();
         let addr = format!("{}:7878", user[1]);
-        self.client.connect_to(
+        self.client.accept_connection(
             addr.parse().expect(
                 &format!("unable to parse: {}", addr)
                 ));
@@ -297,7 +301,7 @@ impl App {
         match self.input_mode {
             InputMode::Connected => {
                 let input = Paragraph::new(self.input.as_str())
-                    .style(Style::default())
+                    .style(Style::default().fg(Color::Yellow))
                     .block(Block::bordered().title("Input"));
                 frame.render_widget(input, input_area);
             }

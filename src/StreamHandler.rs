@@ -22,6 +22,19 @@ impl Client {
             tx: tx
         }
     }
+    pub fn accept_connection(& mut self, address: SocketAddr) -> std::io::Result<()>{
+        match TcpStream::connect_timeout(
+            &address, Duration::from_secs(5)){
+            Ok(stream) => {
+                self.connected = true;
+                self.stream = Some(stream);
+            }
+            Err(_) => {
+                self.tx.send(Event::ConnectionKo(address)).unwrap();
+            }
+        }
+        Ok(())
+    }
     pub fn connect_to(& mut self, address: SocketAddr) -> std::io::Result<()>{
         match TcpStream::connect_timeout(
             &address, Duration::from_secs(5)){
