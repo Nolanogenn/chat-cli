@@ -106,6 +106,12 @@ impl App {
     const fn reset_cursor(&mut self) {
         self.character_index = 0;
     }
+    fn submit_message(&mut self){
+        self.messages.push(self.input.clone());
+        self.input.clear();
+        self.reset_cursor();
+        self.write_msg("MSG".to_string(), self.input.clone());
+    }
     fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) -> io::Result<()> {
         match self.input_mode {
             InputMode::Connected => match key_event.code {
@@ -117,7 +123,9 @@ impl App {
                 KeyCode::Backspace => self.delete_char(),
                 KeyCode::Left => self.move_cursor_left(),
                 KeyCode::Right => self.move_cursor_right(),
-                KeyCode::Enter => self.write_msg("MSG".to_string(), self.input.clone()),
+                KeyCode::Enter => {
+                    self.submit_message();
+                }
                 _ => {}
             }
             InputMode::WaitingForResponse => match key_event.code {
@@ -249,10 +257,16 @@ impl App {
                 "CLOSECONN" => {
                     self.remove_conn(username.to_string(), msg.to_string())
                 },
+                "MSG" => {
+                    self.receive_msg(username.to_string(), msg.to_string())
+                },
                 _ => todo!("{}", command),
             }
         }
         Ok(())
+    }
+    fn receive_msg(&mut self, username: String, msg: String) {
+        self.messages.push(format!("{}: {}", username, msg));
     }
     pub fn run(
         &mut self,
