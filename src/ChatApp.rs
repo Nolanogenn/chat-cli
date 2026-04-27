@@ -169,7 +169,7 @@ impl App {
         let addr = user[1];
         self.client.connect_to(
             addr.parse().expect(
-                format!("unable to parse:{}", addr)
+                &format!("unable to parse: {}", addr)
                 ));
     }
     fn try_connection(& mut self, addr: SocketAddr){
