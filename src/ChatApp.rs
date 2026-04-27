@@ -145,7 +145,7 @@ impl App {
                             self.input_mode = InputMode::Connecting
                         },
                         Some(n) => {
-                            self.accept_conn(n)
+                            self.accept_conn(n);
                         },
                         _ => {}
                     }
