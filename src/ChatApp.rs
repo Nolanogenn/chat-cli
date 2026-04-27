@@ -225,7 +225,7 @@ impl App {
     fn handle_connection_accepted(&mut self, local_addr: IpAddr) -> io::Result<()>{
         self.input_mode = InputMode::Connected;
         self.input = "".to_string();
-        self.write_msg("TRYCONN".to_string, self.local_addr.unwrap().to_string());
+        self.write_msg("TRYCONN".to_string(), self.local_addr.unwrap().to_string());
         Ok(())
     }
     fn handle_connection_ok(&mut self, local_addr: IpAddr) -> io::Result<()>{
