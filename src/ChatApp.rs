@@ -165,7 +165,7 @@ impl App {
                     KeyCode::Esc => { 
                     self.write_msg(
                         "CLOSECONN".to_string(),
-                        self.local_addr.unwrap().to_string());
+                        self.local_addr.expect().to_string());
                     self.input_mode = InputMode::List
                 },
                     KeyCode::Enter => {
