@@ -167,8 +167,10 @@ impl App {
     fn accept_conn(& mut self, n: usize){
         let user: Vec<&str> = self.items.get(n).unwrap().split(' ').collect();
         let addr = user[1];
-        println!("{}", addr);
-        self.client.connect_to(addr.parse().expect("unable to parse"));
+        self.client.connect_to(
+            addr.parse().expect(
+                format!("unable to parse:{}", addr)
+                ));
     }
     fn try_connection(& mut self, addr: SocketAddr){
         self.client.connect_to(addr);
