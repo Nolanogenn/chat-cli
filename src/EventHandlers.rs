@@ -9,7 +9,7 @@ use std::{
 
 pub enum Event{
     Input(KeyEvent),
-    ConnectionOk(SocketAddr,TcpStream),
+    ConnectionOk(SocketAddr),
     ConnectionKo(SocketAddr),
     TcpMessageIn(String),
     Error(String)

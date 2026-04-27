@@ -1,3 +1,4 @@
+use regex::Regex;
 use std::net::{TcpListener, TcpStream};
 use crossterm::event::{KeyCode};
 use ratatui::layout::{Constraint, Layout,Rect};
@@ -13,6 +14,7 @@ use std::{
     net::SocketAddr
 };
 use crate::EventHandlers::*;
+use crate::StreamHandler::*;
 
 pub struct App{
     exit: bool,
@@ -23,9 +25,10 @@ pub struct App{
     input_mode: InputMode,
     list_state: ListState,
     items: Vec<String>,
-    stream: Option<TcpStream>,
     rx: mpsc::Receiver<Event>,
-    tx: mpsc::Sender<Event>
+    tx: mpsc::Sender<Event>,
+    client: Client,
+    username: String
 }
 
 enum InputMode {
@@ -41,7 +44,9 @@ impl App {
         list_state: ListState,
         items: Vec<String>,
         rx: mpsc::Receiver<Event>,
-        tx: mpsc::Sender<Event>
+        tx: mpsc::Sender<Event>,
+        client_tx: mpsc::Sender<Event>,
+        username: String
         ) -> Self {
         Self {
             exit: false,
@@ -52,9 +57,10 @@ impl App {
             character_index: 0,
             list_state: list_state,
             items: items,
-            stream: None,
             rx: rx,
-            tx: tx
+            tx: tx,
+            client: Client::new(client_tx),
+            username: username
         }
     }
     fn move_cursor_left(&mut self) {
@@ -146,34 +152,29 @@ impl App {
         }
         Ok(())
     }
-    fn try_connection(& self, addr: SocketAddr){
-        let tx_to_connection_events = self.tx.clone();
-        thread::spawn(move || {
-            match TcpStream::connect_timeout(
-                &addr, Duration::from_secs(5)
-                ){
-                Ok(stream) => {
-                    tx_to_connection_events.send(
-                        Event::ConnectionOk(
-                            addr, stream)).unwrap();
-                }
-                Err(_) => {
-                    tx_to_connection_events.send(
-                        Event::ConnectionKo(
-                            addr)).unwrap();
-                }
-            }
-        });
+    fn try_connection(& mut self, addr: SocketAddr){
+        self.client.connect_to(addr);
     }
-    fn handle_connection_ok(&mut self, stream: TcpStream) -> io::Result<()>{
+    fn handle_connection_ok(&mut self) -> io::Result<()>{
         self.input_mode = InputMode::WaitingForResponse;
-        self.stream = Some(stream);
-        //stream.write("::<TRYCONN>::")?;
+        self.client.write(format!("<TRYCONN> {}\r\n", self.username).to_string());
         Ok(())
     }
     fn handle_connection_ko(&mut self) -> io::Result<()>{
         self.msg = "Impossibile stabilire una connessione".to_string();
         self.input_mode = InputMode::Error;
+        Ok(())
+    }
+    fn handle_message_in(&mut self, msg: &str) -> io::Result<()>{
+        let re = Regex::new(r"<([A-Z]+)>").unwrap(); 
+        if let Some(caps)  = re.captures(msg) {
+            let command = &caps[1];
+            let remainder = &caps[2];
+            match command {
+                "TRYCONN" => self.items.push(remainder.to_string()),
+                _ => todo!(),
+            }
+        }
         Ok(())
     }
     pub fn run(
@@ -184,8 +185,9 @@ impl App {
             terminal.draw(|frame| self.render(frame))?;
             match self.rx.recv().unwrap(){
                     Event::Input(key_event) => self.handle_key_event(key_event)?,
-                    Event::ConnectionOk(addr, stream) => self.handle_connection_ok(stream)?,
+                    Event::ConnectionOk(addr) => self.handle_connection_ok()?,
                     Event::ConnectionKo(addr) => self.handle_connection_ko()?,
+                    Event::TcpMessageIn(msg) => self.handle_message_in(& msg)?,
                     _ => todo!()
                 }
         }
