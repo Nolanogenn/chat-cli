@@ -1,4 +1,4 @@
-use crossterm::event::{KeyEvent};
+use crossterm::event::{KeyEvent, KeyEventKind};
 use std::{
     sync::mpsc,
     net::TcpStream,
@@ -33,7 +33,11 @@ pub fn handle_listener_events(tx:mpsc::Sender<Event>){
 pub fn handle_input_events(tx: mpsc::Sender<Event>){
     loop {
         match crossterm::event::read().unwrap(){
-            crossterm::event::Event::Key(key_event) => tx.send(Event::Input(key_event)).unwrap(),
+            crossterm::event::Event::Key(key_event) => {
+                if key_event.kind == KeyEventKind::Press{
+                    tx.send(Event::Input(key_event)).unwrap();
+                }
+            },
             _ => {}
         }
     }
