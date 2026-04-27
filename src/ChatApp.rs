@@ -159,7 +159,7 @@ impl App {
     }
     fn write_msg(& mut self, command: String, msg: String){
         self.client.write(
-            format!("<{}> {} {}\r\n", command, self.username, msg)
+            format!("<{}> <{}> {}\r\n", command, self.username, msg)
             .to_string()
         );
     }
