@@ -11,7 +11,7 @@ use std::{
     sync::mpsc,
     thread,
     time::Duration,
-    net::SocketAddr
+    net::{SocketAddr, IpAddr}
 };
 use crate::EventHandlers::*;
 use crate::StreamHandler::*;
@@ -28,7 +28,8 @@ pub struct App{
     rx: mpsc::Receiver<Event>,
     tx: mpsc::Sender<Event>,
     client: Client,
-    username: String
+    username: String,
+    local_addr: Option<IpAddr>
 }
 
 enum InputMode {
@@ -46,7 +47,7 @@ impl App {
         rx: mpsc::Receiver<Event>,
         tx: mpsc::Sender<Event>,
         client_tx: mpsc::Sender<Event>,
-        username: String
+        username: String,
         ) -> Self {
         Self {
             exit: false,
@@ -60,7 +61,8 @@ impl App {
             rx: rx,
             tx: tx,
             client: Client::new(client_tx),
-            username: username
+            username: username,
+            local_addr: None
         }
     }
     fn move_cursor_left(&mut self) {
@@ -105,6 +107,9 @@ impl App {
         match self.input_mode {
             InputMode::WaitingForResponse => match key_event.code {
                 KeyCode::Esc => {
+                    self.write_msg(
+                        "CLOSECONN".to_string(),
+                        self.local_addr.unwrap().to_string());
                     self.input_mode = InputMode::Connecting
                 },
                 _ => {}
@@ -152,12 +157,26 @@ impl App {
         }
         Ok(())
     }
+    fn write_msg(& mut self, command: String, msg: String){
+        self.client.write(
+            format!("<{}> {} {}\r\n", command, self.username, msg)
+            .to_string()
+        );
+    }
     fn try_connection(& mut self, addr: SocketAddr){
         self.client.connect_to(addr);
     }
-    fn handle_connection_ok(&mut self) -> io::Result<()>{
+    fn remove_conn(& mut self, username: String, addr: String){
+        if let Some(pos) = self.items.iter().position(
+            |x| x.contains(&username) && x.contains(&addr)
+            ) {
+            self.items.remove(pos);
+        }
+    }
+    fn handle_connection_ok(&mut self, local_addr: IpAddr) -> io::Result<()>{
         self.input_mode = InputMode::WaitingForResponse;
-        self.client.write(format!("<TRYCONN> {}\r\n", self.username).to_string());
+        self.local_addr = Some(local_addr);
+        self.write_msg("TRYCONN".to_string(), self.local_addr.unwrap().to_string()); 
         Ok(())
     }
     fn handle_connection_ko(&mut self) -> io::Result<()>{
@@ -166,12 +185,22 @@ impl App {
         Ok(())
     }
     fn handle_message_in(&mut self, msg: &str) -> io::Result<()>{
-        let re = Regex::new(r"^<([^>]+)>(.*)$").unwrap(); 
+        let re = Regex::new(r"^<([^>]+)> <([^>]+> (.*)$").unwrap(); 
         if let Some(caps)  = re.captures(msg) {
             let command = &caps[1];
-            let remainder = &caps[2];
+            let username = &caps[2];
+            let msg = &caps[3];
             match command {
-                "TRYCONN" => self.items.push(remainder.to_string()),
+                "TRYCONN" =>{
+                    self.items.push(
+                        format!(
+                            "{} {}", username.to_string(), msg.to_string()
+                            )
+                        )
+                    },
+                "CLOSECONN" => {
+                    self.remove_conn(username.to_string(), msg.to_string())
+                },
                 _ => todo!(),
             }
         }
@@ -185,7 +214,7 @@ impl App {
             terminal.draw(|frame| self.render(frame))?;
             match self.rx.recv().unwrap(){
                     Event::Input(key_event) => self.handle_key_event(key_event)?,
-                    Event::ConnectionOk(addr) => self.handle_connection_ok()?,
+                    Event::ConnectionOk(addr,local_addr) => self.handle_connection_ok(local_addr)?,
                     Event::ConnectionKo(addr) => self.handle_connection_ko()?,
                     Event::TcpMessageIn(msg) => self.handle_message_in(& msg)?,
                     _ => todo!()

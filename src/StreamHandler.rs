@@ -9,7 +9,7 @@ use crate::EventHandlers::*;
 pub struct Client{
     connected: bool,
     stream: Option<TcpStream>,
-    tx: mpsc::Sender<Event>
+    tx: mpsc::Sender<Event>,
 }
 
 impl Client {
@@ -27,8 +27,9 @@ impl Client {
             &address, Duration::from_secs(5)){
             Ok(stream) => {
                 self.connected = true;
+                let local_addr = stream.local_addr().unwrap().ip();
                 self.stream = Some(stream);
-                self.tx.send(Event::ConnectionOk(address)).unwrap();
+                self.tx.send(Event::ConnectionOk(address,local_addr)).unwrap();
             }
             Err(_) => {
                 self.tx.send(Event::ConnectionKo(address)).unwrap();

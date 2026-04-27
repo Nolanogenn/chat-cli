@@ -3,13 +3,13 @@ use std::{
     sync::mpsc,
     net::TcpStream,
     net::TcpListener,
-    net::SocketAddr,
+    net::{SocketAddr, IpAddr},
     io::{BufReader, prelude::*}
 };
 
 pub enum Event{
     Input(KeyEvent),
-    ConnectionOk(SocketAddr),
+    ConnectionOk(SocketAddr,IpAddr),
     ConnectionKo(SocketAddr),
     TcpMessageIn(String),
     Error(String)
