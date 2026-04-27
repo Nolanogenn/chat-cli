@@ -3,7 +3,7 @@ use std::net::{TcpListener, TcpStream};
 use crossterm::event::{KeyCode};
 use ratatui::layout::{Constraint, Layout,Rect};
 use ratatui::style::{Color, Modifier, Style, Stylize};
-use ratatui::text::{Line, Text};
+use ratatui::text::{Line, Text, Span};
 use ratatui::widgets::{Block, List, ListItem, Paragraph, ListState};
 use ratatui::{DefaultTerminal, Frame};
 use std::{
@@ -107,7 +107,8 @@ impl App {
         self.character_index = 0;
     }
     fn submit_message(&mut self){
-        self.messages.push(self.input.clone());
+        self.messages.push(
+            format!("ME: {}", self.input.clone()));
         self.input.clear();
         self.reset_cursor();
         self.write_msg("MSG".to_string(), self.input.clone());
@@ -338,6 +339,16 @@ impl App {
                     .style(Style::default().fg(Color::Yellow))
                     .block(Block::bordered().title("Input"));
                 frame.render_widget(input, input_area);
+                let messages: Vec<ListItem> = self.messages
+                    .iter()
+                    .enumerate()
+                    .map(|(_,m)| {
+                        let content = Line::from(Span::raw(format!("{m}")));
+                        ListItem::new(content)
+                    }).collect();
+                let messages = List::new(messages).block(Block::bordered().title("messaggi"));
+                frame.render_widget(messages,messages_area);
+                
             }
             InputMode::List => self.render_list(frame, first),
             InputMode::Connecting => {
