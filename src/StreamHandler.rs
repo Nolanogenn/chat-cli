@@ -27,7 +27,9 @@ impl Client {
             &address, Duration::from_secs(5)){
             Ok(stream) => {
                 self.connected = true;
+                let local_addr = stream.local_addr().unwrap().ip();
                 self.stream = Some(stream);
+                self.tx.send(Event::ConnectionAccepted(address,local_addr)).unwrap();
             }
             Err(_) => {
                 self.tx.send(Event::ConnectionKo(address)).unwrap();

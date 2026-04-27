@@ -109,7 +109,10 @@ impl App {
     fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) -> io::Result<()> {
         match self.input_mode {
             InputMode::Connected => match key_event.code {
-                KeyCode::Esc => { self.input_mode = InputMode::List },
+                KeyCode::Esc => {
+                    self.list_state.select_first();
+                    self.input_mode = InputMode::List
+                },
                 KeyCode::Char(to_insert) => self.enter_char(to_insert),
                 KeyCode::Backspace => self.delete_char(),
                 KeyCode::Left => self.move_cursor_left(),
@@ -185,7 +188,7 @@ impl App {
             .to_string()
         );
     }
-    fn accept_conn(& mut self, n: usize){
+    fn accept_conn(& mut self, n: usize)-> io::Result<()>{
         let user: Vec<&str> = self.items.get(n).unwrap().split(' ').collect();
         let addr = format!("{}:7878", user[1]);
         self.client.accept_connection(
@@ -194,6 +197,7 @@ impl App {
                 ));
         self.input = "".to_string();
         self.input_mode = InputMode::Connected;
+        Ok(())
     }
     fn try_connection(& mut self, addr: SocketAddr){
         self.client.connect_to(addr);
@@ -204,6 +208,11 @@ impl App {
             ) {
             self.items.remove(pos);
         }
+    }
+    fn handle_connection_accepted(&mut self, local_addr: IpAddr) -> io::Result<()>{
+        self.input = "".to_string();
+        self.input_mode = InputMode::Connected;
+        Ok(())
     }
     fn handle_connection_ok(&mut self, local_addr: IpAddr) -> io::Result<()>{
         self.input_mode = InputMode::WaitingForResponse;
@@ -240,7 +249,7 @@ impl App {
                 "CLOSECONN" => {
                     self.remove_conn(username.to_string(), msg.to_string())
                 },
-                _ => todo!(),
+                _ => todo!("{}", command),
             }
         }
         Ok(())
@@ -253,6 +262,7 @@ impl App {
             terminal.draw(|frame| self.render(frame))?;
             match self.rx.recv().unwrap(){
                     Event::Input(key_event) => self.handle_key_event(key_event)?,
+                    Event::ConnectionAccepted(addr, local_addr) => self.handle_connection_accepted(local_addr)?,
                     Event::ConnectionOk(addr,local_addr) => self.handle_connection_ok(local_addr)?,
                     Event::ConnectionKo(addr) => self.handle_connection_ko()?,
                     Event::TcpMessageIn(msg) => self.handle_message_in(& msg)?,
