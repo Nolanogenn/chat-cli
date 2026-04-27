@@ -258,7 +258,6 @@ impl App {
                             self.input_mode = InputMode::Connected;
                         },
                         _ => {
-                            self.input_mode = InputMode::Connected;
                             self.items.push(
                             format!("{} {}",username.to_string(),
                                 msg.to_string()));
