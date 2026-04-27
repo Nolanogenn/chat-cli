@@ -185,7 +185,7 @@ impl App {
         Ok(())
     }
     fn handle_message_in(&mut self, msg: &str) -> io::Result<()>{
-        let re = Regex::new(r"^<([^>]+)> <([^>]+> (.*)$").unwrap(); 
+        let re = Regex::new(r"^<([^>]+)> <([^>]+)> (.*)$").unwrap(); 
         if let Some(caps)  = re.captures(msg) {
             let command = &caps[1];
             let username = &caps[2];
