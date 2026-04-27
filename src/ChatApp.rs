@@ -109,9 +109,9 @@ impl App {
     fn submit_message(&mut self){
         self.messages.push(
             format!("ME: {}", self.input.clone()));
-        self.input.clear();
         self.reset_cursor();
         self.write_msg("MSG".to_string(), self.input.clone());
+        self.input.clear();
     }
     fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) -> io::Result<()> {
         match self.input_mode {
