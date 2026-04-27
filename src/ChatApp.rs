@@ -223,8 +223,9 @@ impl App {
         }
     }
     fn handle_connection_accepted(&mut self, local_addr: IpAddr) -> io::Result<()>{
-        self.input = "".to_string();
         self.input_mode = InputMode::Connected;
+        self.input = "".to_string();
+        self.write_msg("TRYCONN".to_string, self.local_addr.unwrap().to_string());
         Ok(())
     }
     fn handle_connection_ok(&mut self, local_addr: IpAddr) -> io::Result<()>{
@@ -249,13 +250,13 @@ impl App {
                     match self.input_mode{
                         InputMode::WaitingForResponse => {
                             self.input = "".to_string();
-                            self.input_mode = InputMode::Connected
+                            self.input_mode = InputMode::Connected;
                         },
-                        _ => {self.items.push(
-                            format!(
-                                "{} {}",
-                                username.to_string(),
-                                msg.to_string()))
+                        _ => {
+                            self.input_mode = InputMode::Connected;
+                            self.items.push(
+                            format!("{} {}",username.to_string(),
+                                msg.to_string()));
                         }
                     }
                 },
