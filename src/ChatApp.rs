@@ -147,7 +147,12 @@ impl App {
             },
             InputMode::Connecting => {
                 match key_event.code{
-                    KeyCode::Esc => { self.input_mode = InputMode::List},
+                    KeyCode::Esc => { 
+                    self.write_msg(
+                        "CLOSECONN".to_string(),
+                        self.local_addr.unwrap().to_string());
+                    self.input_mode = InputMode::List
+                },
                     KeyCode::Enter => {
                         self.input_mode = InputMode::Waiting;
                         let addr_str = format!("{}:7878", self.input);
@@ -183,6 +188,7 @@ impl App {
             addr.parse().expect(
                 &format!("unable to parse: {}", addr)
                 ));
+        self.input = "".to_string();
         self.input_mode = InputMode::Connected;
     }
     fn try_connection(& mut self, addr: SocketAddr){
@@ -215,7 +221,10 @@ impl App {
             match command {
                 "TRYCONN" =>{
                     match self.input_mode{
-                        InputMode::WaitingForResponse => self.input_mode = InputMode::Connected,
+                        InputMode::WaitingForResponse => {
+                            self.input = "".to_string();
+                            self.input_mode = InputMode::Connected
+                        },
                         _ => {self.items.push(
                             format!(
                                 "{} {}",
