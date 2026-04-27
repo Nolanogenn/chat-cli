@@ -127,6 +127,7 @@ impl App {
                 KeyCode::Enter => {
                     match self.list_state.selected() {
                         Some(0) => { self.input_mode = InputMode::Connecting},
+                        Some(n) => { self.accept_conn(n) },
                         _ => {}
                     }
                 }
@@ -140,7 +141,7 @@ impl App {
                         let addr_str = format!("{}:7878", self.input);
                         let addr: SocketAddr = addr_str
                             .parse()
-                            .expect("unable to pase");
+                            .expect("unable to parse");
                         self.try_connection(addr);
                         },
                     KeyCode::Char(to_insert) => self.enter_char(to_insert),
@@ -162,6 +163,11 @@ impl App {
             format!("<{}> <{}> {}\r\n", command, self.username, msg)
             .to_string()
         );
+    }
+    fn accept_conn(& mut self, n: usize){
+        let user: Vec<&str> = self.items.get(n).unwrap().split(' ').collect();
+        let addr = user[1];
+        self.client.connect_to(addr.parse().expect("unable to parse"));
     }
     fn try_connection(& mut self, addr: SocketAddr){
         self.client.connect_to(addr);
@@ -192,12 +198,16 @@ impl App {
             let msg = &caps[3];
             match command {
                 "TRYCONN" =>{
-                    self.items.push(
-                        format!(
-                            "{} {}", username.to_string(), msg.to_string()
-                            )
-                        )
-                    },
+                    match self.input_mode{
+                        InputMode::WaitingForResponse => todo!(),
+                        _ => {self.items.push(
+                            format!(
+                                "{} {}",
+                                username.to_string(),
+                                msg.to_string()))
+                        }
+                    }
+                },
                 "CLOSECONN" => {
                     self.remove_conn(username.to_string(), msg.to_string())
                 },
