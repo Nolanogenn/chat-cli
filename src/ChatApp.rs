@@ -163,9 +163,14 @@ impl App {
             InputMode::Connecting => {
                 match key_event.code{
                     KeyCode::Esc => { 
-                    self.write_msg(
-                        "CLOSECONN".to_string(),
-                        self.local_addr.expect("addr where").to_string());
+                        match self.local_addr {
+                            Some(IpAddr) => self.write_msg(
+                                    "CLOSECONN".to_string(),
+                                    self.local_addr
+                                    .expect("addr where")
+                                    .to_string()),
+                            _ => {},
+                        }
                     self.input_mode = InputMode::List
                 },
                     KeyCode::Enter => {
