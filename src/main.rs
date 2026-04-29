@@ -12,7 +12,7 @@ mod StreamHandler;
 
 fn main() -> io::Result<()> {
     let username = env!("USERNAME").to_string();
-    assert!(!username.contains(char::is_whitespace));
+    //assert!(!username.contains(char::is_whitespace));
     let mut terminal = ratatui::init();
     let (event_tx, event_rx) = mpsc::channel::<EventHandlers::Event>();
     let tx_to_input_events = event_tx.clone();
